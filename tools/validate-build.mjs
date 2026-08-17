@@ -184,8 +184,13 @@ check(bridgeCells > 500, `Great Bridge produces low/deck physical geometry (${br
 
 const worldBlock = html.match(/var WORLD_THEMES = \[([\s\S]*?)\n\];/)?.[1] || '';
 const districtBlock = html.match(/var EXP_DISTRICT_DATA = \[([\s\S]*?)\n\];/)?.[1] || '';
+const menuCarsBlock = html.match(/var MENU_CARS = \[([\s\S]*?)\n\];/)?.[1] || '';
+const menuCars = [...menuCarsBlock.matchAll(/'([^']+)'/g)].map(match => match[1]);
 check((worldBlock.match(/\{key:/g) || []).length === 11, 'navigation exposes 11 districts');
 check((districtBlock.match(/\{key:/g) || []).length === 10, 'world builder exposes Midtown plus 10 outer districts');
+check(menuCars.length === 35, 'player menu exposes all 35 drivable vehicles');
+check(menuCars.includes('motorcycle') && menuCars.includes('rallytruck'), 'public-repository motorcycle and rally truck are player-selectable');
+check(/35 DRIVABLE VEHICLES · 30 WHEEL SETS · 11 CONNECTED DISTRICTS/.test(html), 'menu summary matches the expanded vehicle and district counts');
 check(/var GATE_MAX = 14/.test(html), 'race gate pool covers the 11-district tour');
 check(/motorcycle:'ext-motorcycle'/.test(html) && /rallytruck:'ext-rally-truck'/.test(html), 'new vehicle styles map to external packed GLBs');
 check(/holder\.rotation\.x=-PI\/2/.test(html), 'Great Bridge uses the corrected Z-up transform');
