@@ -4,6 +4,12 @@ A mobile-first, offline-capable 3D arcade city racer in one playable HTML file.
 
 [Open the game](./index.html)
 
+## Play online
+
+The production build deploys to [GitHub Pages](https://ali1nasser.github.io/Midtown-madness-/) after changes reach `main`. Open that address in the phone's normal Chrome or Samsung Internet browser. Do not use `htmlpreview.github.io` or the ChatGPT Cloud Browser for gameplay; those preview environments may not provide a usable WebGL graphics context.
+
+Repository administrators only need to select **Settings → Pages → Source → GitHub Actions** once. After that, every validated push to `main` publishes the self-contained game automatically.
+
 ## What is in this build
 
 - One seamless 4.2 km world with 11 connected districts.
