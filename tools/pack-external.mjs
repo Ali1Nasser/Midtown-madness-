@@ -3,8 +3,9 @@
  * Convert the small, licensed GLB additions in sources/external into the
  * compact vertex format used by index.html. No npm modules are required.
  *
- * The script writes JSON to stdout. The release build injects that JSON with
- * apply_patch so the checked-in HTML remains a strict, offline single file.
+ * By default the script writes JSON to stdout. Use --write to replace the
+ * generated MDL_EXT_IX and MDL_EXT_B64 blocks in index.html, or --check to
+ * verify that the checked-in single-file build is reproducible.
  */
 
 import fs from 'node:fs';
@@ -17,9 +18,18 @@ const ROOT = path.resolve(HERE, '..');
 const SOURCES = [
   { key: 'ext-motorcycle', file: 'vehicle-motorcycle.glb.b64', vehicle: true },
   { key: 'ext-rally-truck', file: 'vehicle-truck-green.glb.b64', vehicle: true },
+  { key: 'ext-rally-purple', file: 'vehicle-truck-purple.glb.b64', vehicle: true },
+  { key: 'ext-rally-red', file: 'vehicle-truck-red.glb.b64', vehicle: true },
+  { key: 'ext-rally-yellow', file: 'vehicle-truck-yellow.glb.b64', vehicle: true },
   { key: 'ext-rally-forest', file: 'decoration-forest.glb.b64' },
   { key: 'ext-race-tents', file: 'decoration-tents.glb.b64' },
-  { key: 'ext-track-bump', file: 'track-bump.glb.b64' }
+  { key: 'ext-track-bump', file: 'track-bump.glb.b64' },
+  { key: 'ext-track-straight', file: 'track-straight.glb.b64' },
+  { key: 'ext-track-corner', file: 'track-corner.glb.b64' },
+  { key: 'ext-track-finish', file: 'track-finish.glb.b64' },
+  { key: 'ext-modkit-crates', file: 'modkit-crate-stack.glb.b64' },
+  { key: 'ext-modkit-barrel', file: 'modkit-barrel.glb.b64' },
+  { key: 'ext-modkit-pallet', file: 'modkit-pallet.glb.b64' }
 ];
 
 const COMPONENTS = {
@@ -314,7 +324,25 @@ for (const source of SOURCES) {
 
 const output = { index, base64: Buffer.concat(binaries).toString('base64'), report };
 
-if (process.argv.includes('--check')) {
+if (process.argv.includes('--write')) {
+  const htmlPath = path.join(ROOT, 'index.html');
+  let html = fs.readFileSync(htmlPath, 'utf8');
+  const indexPattern = /var MDL_EXT_IX=\{.*?\};\nvar MDL_EXT_B64=/s;
+  const binaryPattern = /var MDL_EXT_B64="[A-Za-z0-9+/=]+";/s;
+  if (!indexPattern.test(html) || !binaryPattern.test(html)) {
+    throw new Error('Could not find generated external model blocks in index.html');
+  }
+  html = html.replace(indexPattern, `var MDL_EXT_IX=${JSON.stringify(output.index)};\nvar MDL_EXT_B64=`);
+  html = html.replace(binaryPattern, `var MDL_EXT_B64="${output.base64}";`);
+  fs.writeFileSync(htmlPath, html);
+  console.log(JSON.stringify({
+    ok: true,
+    written: path.relative(ROOT, htmlPath),
+    models: Object.keys(output.index).length,
+    sourceBytes: report.reduce((total, item) => total + item.sourceBytes, 0),
+    packedBytes: Buffer.concat(binaries).length
+  }, null, 2));
+} else if (process.argv.includes('--check')) {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const indexMatch = html.match(/var MDL_EXT_IX=(\{.*?\});\nvar MDL_EXT_B64=/s);
   const binaryMatch = html.match(/var MDL_EXT_B64="([A-Za-z0-9+/=]+)";/s);
