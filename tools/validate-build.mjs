@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const workflowPath = path.join(ROOT, '.github', 'workflows', 'validate.yml');
+const workflow = fs.existsSync(workflowPath) ? fs.readFileSync(workflowPath, 'utf8') : '';
 const errors = [];
 const checks = [];
 
@@ -38,6 +40,8 @@ const refs = [...html.matchAll(/getElementById\(["']([^"']+)["']\)/g)].map(m => 
 const missingRefs = [...new Set(refs.filter(id => !ids.includes(id)))];
 check(duplicateIds.length === 0, 'DOM IDs are unique');
 check(missingRefs.length === 0, 'all getElementById references resolve');
+check(/pull_request:\s*\n/.test(workflow) && /branches:\s*\n\s*- main/.test(workflow), 'GitHub validation runs for pull requests and main');
+check(/node tools\/pack-external\.mjs --check/.test(workflow) && /node tools\/validate-build\.mjs/.test(workflow), 'GitHub validation runs both deterministic checks');
 
 const baseIndex = matchJson(/var MDL_IX=(\{.*?\});\nvar MDL_COL=/s, 'MDL_IX');
 const extIndex = matchJson(/var MDL_EXT_IX=(\{.*?\});\nvar MDL_EXT_B64=/s, 'MDL_EXT_IX');
@@ -182,17 +186,54 @@ const bridgeCells = wallCellCount('city-roadway-bridge',
 check(bridgeDeck > 8 && bridgeDeck < 13, `Great Bridge deck resolves to a plausible raised height (${bridgeDeck.toFixed(2)} m)`);
 check(bridgeCells > 500, `Great Bridge produces low/deck physical geometry (${bridgeCells} cells)`);
 
+const sourceProfiles = [
+  ['Roadscape', 'city-roadscape', 1.05, null, 2.65],
+  ['Real Buildings', 'city-buildings', 1.15, null, 2.65],
+  ['Wild Town', 'city-wild-town', .045, null, 2.65],
+  ['Cartoon City', 'city-cartoon', 1, null, 2.65],
+  ['Complete Plaza', 'city-building-complete', 1.45, null, 2.65],
+  ['Tower Quarter', 'city-only-building', 1.6, null, 2.65],
+  ['Rally Forest', 'ext-rally-forest', 4.05, null, 1.9],
+  ['Race Tents', 'ext-race-tents', 2.75, null, 1.65]
+];
+const sourceWallProfiles = {};
+for (const [label, name, scale, authoredGround, cell] of sourceProfiles) {
+  const bounds = geometryBounds(modelGeometry(name));
+  const cx = (bounds.min[0] + bounds.max[0]) / 2;
+  const cz = (bounds.min[2] + bounds.max[2]) / 2;
+  const ground = authoredGround ?? bounds.min[1];
+  const cells = wallCellCount(name,
+    (x, y, z) => [(x - cx) * scale, .22 + (y - ground) * scale, (z - cz) * scale],
+    [[.04, 3.67]], cell);
+  sourceWallProfiles[name] = cells;
+  check(cells > 5, `${label} exposes vehicle-height physical geometry (${cells} cells per representative instance)`);
+}
+
 const worldBlock = html.match(/var WORLD_THEMES = \[([\s\S]*?)\n\];/)?.[1] || '';
 const districtBlock = html.match(/var EXP_DISTRICT_DATA = \[([\s\S]*?)\n\];/)?.[1] || '';
 const menuCarsBlock = html.match(/var MENU_CARS = \[([\s\S]*?)\n\];/)?.[1] || '';
 const menuCars = [...menuCarsBlock.matchAll(/'([^']+)'/g)].map(match => match[1]);
+const modelForBlock = html.match(/var MDL_FOR = \{([\s\S]*?)\n\};/)?.[1] || '';
+const modelFor = Object.fromEntries([...modelForBlock.matchAll(/([a-z0-9]+)\s*:\s*'([^']+)'/g)]
+  .map(match => [match[1], match[2]]));
+const worldModelKeys = [
+  'city-scifi', 'city-roadscape', 'city-buildings', 'city-wild-town',
+  'city-cartoon', 'city-building-complete', 'city-only-building', 'city-roadway-bridge',
+  'ext-rally-forest', 'ext-race-tents', 'ext-track-bump'
+];
 check((worldBlock.match(/\{key:/g) || []).length === 11, 'navigation exposes 11 districts');
 check((districtBlock.match(/\{key:/g) || []).length === 10, 'world builder exposes Midtown plus 10 outer districts');
 check(menuCars.length === 35, 'player menu exposes all 35 drivable vehicles');
 check(menuCars.includes('motorcycle') && menuCars.includes('rallytruck'), 'public-repository motorcycle and rally truck are player-selectable');
+check(Object.keys(modelFor).length === 35, 'all 35 player vehicles have packed-model mappings');
+check(menuCars.every(style => modelFor[style]), 'every player-selectable vehicle resolves to a model mapping');
+check(Object.values(modelFor).every(model => index[model]), 'every vehicle mapping resolves to a packed model');
+check(worldModelKeys.every(model => index[model]), 'every placed world GLB resolves to packed geometry');
 check(/35 DRIVABLE VEHICLES · 30 WHEEL SETS · 11 CONNECTED DISTRICTS/.test(html), 'menu summary matches the expanded vehicle and district counts');
 check(/var GATE_MAX = 14/.test(html), 'race gate pool covers the 11-district tour');
 check(/motorcycle:'ext-motorcycle'/.test(html) && /rallytruck:'ext-rally-truck'/.test(html), 'new vehicle styles map to external packed GLBs');
+check(/EXPECTED_PHYSICAL_GLB_ROOTS=11,EXPECTED_PHYSICAL_GLB_INSTANCES=62/.test(html), 'runtime GLB audit covers all 11 roots and 62 placed instances');
+check((html.match(/trackPhysicalGlbRoot\(/g) || []).length === 5, 'every world GLB placement path reports physical coverage');
 check(/holder\.rotation\.x=-PI\/2/.test(html), 'Great Bridge uses the corrected Z-up transform');
 check(!/addSolid\(d\.x,d\.z[-+]188/.test(html), 'Great Bridge entrances contain no full-width blockers');
 check(/registerPhysicalObject\(holder/.test(html), 'archive GLBs are registered through mesh-derived collision');
@@ -203,6 +244,8 @@ const result = {
   checks: checks.length,
   models: Object.keys(index).length,
   packedBytes: packed.length,
+  physicalGlbInstances: 62,
+  sourceWallProfiles,
   sciFiWallCells: sciCells,
   greatBridgeDeckMetres: Number(bridgeDeck.toFixed(3)),
   greatBridgeWallCells: bridgeCells,

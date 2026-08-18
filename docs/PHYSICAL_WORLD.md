@@ -13,6 +13,12 @@ Static collisions use a spatial hash of axis-aligned cells. Procedural Midtown b
 
 This is deliberately more precise than one bounding box per city and much lighter than running triangle collision every frame.
 
+The two extremely dense single-building archives use source-derived footprint solids instead of reprocessing millions of repeated triangles at startup. They remain physical, while the lighter city, bridge, forest, and tent scenes use the mesh-cell path above. Stunt bumps use their authored GLB dimensions with an analytical curved driving surface.
+
+## Runtime ghost-object audit
+
+Every world-placement path reports its physical implementation after construction. The runtime expects 11 physical GLB roots containing 62 placed instances, covering archive cities, the Great Bridge, expansion scenery, stunt bumps, and Motor Mile vehicles. If a future asset fails to register any collision—or a placement path is accidentally removed—the main menu displays a warning instead of silently presenting a drive-through object.
+
 ## Sci-Fi Center repair
 
 The model contains geometry below the authored city base. Grounding it at the absolute lowest vertex lifted the usable walls above the player's collision band. The district now uses its actual structural base (`-11.14` model units), after which the mesh proxy generator produces thousands of façade cells while preserving the arterial lanes.

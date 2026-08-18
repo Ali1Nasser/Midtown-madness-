@@ -312,4 +312,28 @@ for (const source of SOURCES) {
   });
 }
 
-process.stdout.write(JSON.stringify({ index, base64: Buffer.concat(binaries).toString('base64'), report }));
+const output = { index, base64: Buffer.concat(binaries).toString('base64'), report };
+
+if (process.argv.includes('--check')) {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const indexMatch = html.match(/var MDL_EXT_IX=(\{.*?\});\nvar MDL_EXT_B64=/s);
+  const binaryMatch = html.match(/var MDL_EXT_B64="([A-Za-z0-9+/=]+)";/s);
+  const problems = [];
+  if (!indexMatch) problems.push('MDL_EXT_IX is missing from index.html');
+  else if (JSON.stringify(JSON.parse(indexMatch[1])) !== JSON.stringify(output.index))
+    problems.push('MDL_EXT_IX does not match the reproducible source pack');
+  if (!binaryMatch) problems.push('MDL_EXT_B64 is missing from index.html');
+  else if (binaryMatch[1] !== output.base64)
+    problems.push('MDL_EXT_B64 does not match the reproducible source pack');
+  const result = {
+    ok: problems.length === 0,
+    models: Object.keys(output.index).length,
+    packedBytes: Buffer.concat(binaries).length,
+    sourceBytes: report.reduce((total, item) => total + item.sourceBytes, 0),
+    problems
+  };
+  console.log(JSON.stringify(result, null, 2));
+  if (problems.length) process.exit(1);
+} else {
+  process.stdout.write(JSON.stringify(output));
+}
