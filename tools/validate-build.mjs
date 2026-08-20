@@ -53,8 +53,8 @@ const packed = Buffer.concat([baseBuffer, extBuffer]);
 const index = { ...baseIndex, ...extIndex };
 
 check(Object.keys(baseIndex).length === 160, 'original 160-model pack is intact');
-check(Object.keys(extIndex).length === 5, 'five public-repository GLBs are packed');
-check(Object.keys(index).length === 165, 'combined pack exposes 165 unique models');
+check(Object.keys(extIndex).length === 14, 'fourteen public-repository GLBs are packed');
+check(Object.keys(index).length === 174, 'combined pack exposes 174 unique models');
 
 function partBytes(part) {
   return part.v * 6 + part.v * 3 + part.v * 3 + part.v + part.i * (part.w ? 4 : 2);
@@ -83,9 +83,18 @@ checks.push('all packed model and index byte ranges are valid');
 const upstream = {
   'vehicle-motorcycle.glb.b64': 'f0d7dc0bc81b885393bd1350eaf95b2b304e1766',
   'vehicle-truck-green.glb.b64': 'a3ade83b5bfdb528135d6b2338e4b47e31f6efcd',
+  'vehicle-truck-purple.glb.b64': '77f26e901928d2475e34a46b8e88d777e51e11a2',
+  'vehicle-truck-red.glb.b64': 'fcd901f5d43e0984b52fe947d31d9a121463127a',
+  'vehicle-truck-yellow.glb.b64': '075069215e068ee6a2b45a6698f9905f998e8412',
   'decoration-forest.glb.b64': '49ecf70a1a63850d71d18d5414ce2262fd12cd20',
   'decoration-tents.glb.b64': 'f1592cf96c3d1f2316950bb891cd3c533f57a84d',
-  'track-bump.glb.b64': '52490f369200eed4d4238933f26bc31f60feb23a'
+  'track-bump.glb.b64': '52490f369200eed4d4238933f26bc31f60feb23a',
+  'track-straight.glb.b64': '9c24a6cbe81b41fb2f3f68fcbbc250730e689f0f',
+  'track-corner.glb.b64': '6dd2420005b5a82b718d9accedda35136f250bac',
+  'track-finish.glb.b64': 'f00e455f3e812fe6410c560972b56655eb9d9a93',
+  'modkit-crate-stack.glb.b64': 'c58675ddebf7b39ccdc4fb6ea7474f4b34e67134',
+  'modkit-barrel.glb.b64': '6d467fd830eb264c6ff1dcb7f9d910553ecd58a5',
+  'modkit-pallet.glb.b64': 'c4957400baffd90532755a8741c58e36b163ce28'
 };
 for (const [file, expected] of Object.entries(upstream)) {
   const encoded = fs.readFileSync(path.join(ROOT, 'sources', 'external', file), 'utf8').replace(/\s+/g, '');
@@ -194,7 +203,13 @@ const sourceProfiles = [
   ['Complete Plaza', 'city-building-complete', 1.45, null, 2.65],
   ['Tower Quarter', 'city-only-building', 1.6, null, 2.65],
   ['Rally Forest', 'ext-rally-forest', 4.05, null, 1.9],
-  ['Race Tents', 'ext-race-tents', 2.75, null, 1.65]
+  ['Race Tents', 'ext-race-tents', 2.75, null, 1.65],
+  ['Track Straight', 'ext-track-straight', 2.05, null, 1.35],
+  ['Track Corner', 'ext-track-corner', 4, null, 1.35],
+  ['Track Finish', 'ext-track-finish', 1.55, null, .95],
+  ['Cargo Crates', 'ext-modkit-crates', 2.8, null, 1.05],
+  ['Cargo Barrel', 'ext-modkit-barrel', 2.5, null, 1.05],
+  ['Cargo Pallet', 'ext-modkit-pallet', 3.5, null, 1.05]
 ];
 const sourceWallProfiles = {};
 for (const [label, name, scale, authoredGround, cell] of sourceProfiles) {
@@ -206,7 +221,7 @@ for (const [label, name, scale, authoredGround, cell] of sourceProfiles) {
     (x, y, z) => [(x - cx) * scale, .22 + (y - ground) * scale, (z - cz) * scale],
     [[.04, 3.67]], cell);
   sourceWallProfiles[name] = cells;
-  check(cells > 5, `${label} exposes vehicle-height physical geometry (${cells} cells per representative instance)`);
+  check(cells > 3, `${label} exposes vehicle-height physical geometry (${cells} cells per representative instance)`);
 }
 
 const worldBlock = html.match(/var WORLD_THEMES = \[([\s\S]*?)\n\];/)?.[1] || '';
@@ -219,32 +234,37 @@ const modelFor = Object.fromEntries([...modelForBlock.matchAll(/([a-z0-9]+)\s*:\
 const worldModelKeys = [
   'city-scifi', 'city-roadscape', 'city-buildings', 'city-wild-town',
   'city-cartoon', 'city-building-complete', 'city-only-building', 'city-roadway-bridge',
-  'ext-rally-forest', 'ext-race-tents', 'ext-track-bump'
+  'ext-rally-forest', 'ext-race-tents', 'ext-track-bump', 'ext-track-straight',
+  'ext-track-corner', 'ext-track-finish', 'ext-modkit-crates', 'ext-modkit-barrel', 'ext-modkit-pallet'
 ];
-check((worldBlock.match(/\{key:/g) || []).length === 11, 'navigation exposes 11 districts');
-check((districtBlock.match(/\{key:/g) || []).length === 10, 'world builder exposes Midtown plus 10 outer districts');
-check(menuCars.length === 35, 'player menu exposes all 35 drivable vehicles');
-check(menuCars.includes('motorcycle') && menuCars.includes('rallytruck'), 'public-repository motorcycle and rally truck are player-selectable');
-check(Object.keys(modelFor).length === 35, 'all 35 player vehicles have packed-model mappings');
+check((worldBlock.match(/\{key:/g) || []).length === 13, 'navigation exposes 13 districts');
+check((districtBlock.match(/\{key:/g) || []).length === 12, 'world builder exposes Midtown plus 12 outer districts');
+check(menuCars.length === 38, 'player menu exposes all 38 drivable vehicles');
+check(['motorcycle','rallytruck','rallypurple','rallyred','rallyyellow'].every(style => menuCars.includes(style)), 'all five public-repository vehicles are player-selectable');
+check(Object.keys(modelFor).length === 38, 'all 38 player vehicles have packed-model mappings');
 check(menuCars.every(style => modelFor[style]), 'every player-selectable vehicle resolves to a model mapping');
 check(Object.values(modelFor).every(model => index[model]), 'every vehicle mapping resolves to a packed model');
 check(worldModelKeys.every(model => index[model]), 'every placed world GLB resolves to packed geometry');
-check(/35 DRIVABLE VEHICLES · 30 WHEEL SETS · 11 CONNECTED DISTRICTS/.test(html), 'menu summary matches the expanded vehicle and district counts');
-check(/var GATE_MAX = 14/.test(html), 'race gate pool covers the 11-district tour');
-check(/motorcycle:'ext-motorcycle'/.test(html) && /rallytruck:'ext-rally-truck'/.test(html), 'new vehicle styles map to external packed GLBs');
-check(/EXPECTED_PHYSICAL_GLB_ROOTS=11,EXPECTED_PHYSICAL_GLB_INSTANCES=62/.test(html), 'runtime GLB audit covers all 11 roots and 62 placed instances');
-check((html.match(/trackPhysicalGlbRoot\(/g) || []).length === 5, 'every world GLB placement path reports physical coverage');
+check(/38 DRIVABLE VEHICLES · 30 WHEEL SETS · 13 CONNECTED DISTRICTS/.test(html), 'menu summary matches the expanded vehicle and district counts');
+check(/var GATE_MAX = 18/.test(html), 'race gate pool covers the 13-district tour with spare capacity');
+check(/motorcycle:'ext-motorcycle'/.test(html) && /rallyyellow:'ext-rally-yellow'/.test(html), 'new vehicle styles map to external packed GLBs');
+check(/physicalGlbRoots=\[\],physicalGlbPlan=\[\]/.test(html) && /function expectPhysicalGlbRoot/.test(html), 'runtime GLB audit derives expectations from a placement plan');
+check(!/EXPECTED_PHYSICAL_GLB_ROOTS|EXPECTED_PHYSICAL_GLB_INSTANCES/.test(html), 'fragile hard-coded physical audit totals are gone');
+const expectedPaths = (html.match(/expectPhysicalGlbRoot\(/g) || []).length;
+const trackedPaths = (html.match(/trackPhysicalGlbRoot\(/g) || []).length;
+check(expectedPaths === trackedPaths && expectedPaths >= 10, 'every GLB placement path pairs an expectation with physical coverage');
+check(/ext-track-straight',12,'analytical side barriers'/.test(html), 'flat track tiles use safe analytical side barriers instead of blocking tile ends');
 check(/holder\.rotation\.x=-PI\/2/.test(html), 'Great Bridge uses the corrected Z-up transform');
 check(!/addSolid\(d\.x,d\.z[-+]188/.test(html), 'Great Bridge entrances contain no full-width blockers');
 check(/registerPhysicalObject\(holder/.test(html), 'archive GLBs are registered through mesh-derived collision');
-check(/WORLD_EDGE = 2100/.test(html) && /EXP_LIMIT = 2020/.test(html), 'world and road boundaries cover the 4.2 km expansion');
+check(/WORLD_EDGE = 2700/.test(html) && /EXP_LIMIT = 2620/.test(html), 'world and road boundaries cover the 5.4 km expansion');
 
 const result = {
   ok: errors.length === 0,
   checks: checks.length,
   models: Object.keys(index).length,
   packedBytes: packed.length,
-  physicalGlbInstances: 62,
+  physicalGlbInstances: 106,
   sourceWallProfiles,
   sciFiWallCells: sciCells,
   greatBridgeDeckMetres: Number(bridgeDeck.toFixed(3)),

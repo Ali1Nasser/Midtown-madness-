@@ -17,7 +17,7 @@ The two extremely dense single-building archives use source-derived footprint so
 
 ## Runtime ghost-object audit
 
-Every world-placement path reports its physical implementation after construction. The runtime expects 11 physical GLB roots containing 62 placed instances, covering archive cities, the Great Bridge, expansion scenery, stunt bumps, and Motor Mile vehicles. If a future asset fails to register any collision—or a placement path is accidentally removed—the main menu displays a warning instead of silently presenting a drive-through object.
+Every world-placement path first declares its expected key and instance count, then reports its actual physical implementation after construction. The audit derives its totals from that plan instead of fragile global constants. The current build checks 18 independent GLB roots containing 106 placed instances, covering archive cities, the Great Bridge, all four expansion districts, stunt surfaces, cargo props, track pieces, and Motor Mile vehicles. Missing instances, unexpected roots, or zero-collider “ghosts” produce a main-menu warning.
 
 ## Sci-Fi Center repair
 
@@ -38,4 +38,6 @@ The old build also created a solid box across both bridge mouths. Those blockers
 
 ## Expansion districts
 
-Rally Park at `(0, -1700)` and Apex Autodrome at `(0, 1700)` extend the connected world to 4.2 km. Both receive the same roads, blocks, AI graph, minimap, navigation, race-course, culling, and collision systems as the archive districts.
+Rally Park at `(0, -1700)`, Apex Autodrome at `(0, 1700)`, Freight Harbor at `(-2350, 0)`, and Mountain Pass at `(2350, 0)` extend the connected world to 5.4 km. All four receive the same roads, blocks, AI graph, minimap, navigation, race-course, culling, and collision systems as the archive districts.
+
+Freight Harbor uses three separately audited ModKit GLB families—crate stacks, barrels, and pallets—on mesh-derived collision. Mountain Pass combines source-authored track straights with safe analytical side barriers, exact-mesh corner exhibits and a physical finish gantry. Flat track-tile ends are intentionally excluded from mesh collision so they cannot become invisible walls across the driving lane.

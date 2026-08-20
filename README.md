@@ -12,14 +12,14 @@ Repository administrators only need to select **Settings → Pages → Source �
 
 ## What is in this build
 
-- One seamless 4.2 km world with 11 connected districts.
-- Midtown plus eight imported archive cities, Rally Park, and Apex Autodrome.
-- 165 packed 3D models with no runtime CDN, fetch, or companion asset folder.
+- One seamless 5.4 km world with 13 connected districts.
+- Midtown plus eight imported archive cities, Rally Park, Apex Autodrome, Freight Harbor, and Mountain Pass.
+- 174 packed 3D models with no runtime CDN, fetch, or companion asset folder.
 - Mesh-derived physical collision for imported GLB cities and scenery.
 - A rebuilt Great Bridge with the correct orientation, a raised deck, open entrances, ramps, barriers, grade separation, and bridge-height traffic.
-- 35 drivable vehicle styles, including the externally sourced Rally Truck and Apex Motorcycle.
-- Physical CC0 forest, race-tent, and track-bump scenery.
-- A runtime ghost-object audit covering all 62 placed GLB instances.
+- 38 drivable vehicle styles, including four externally sourced Rally Trucks and the Apex Motorcycle.
+- Physical CC0 forest, race-tent, track, cargo-yard, and finish-gantry scenery.
+- A data-driven runtime ghost-object audit covering all 106 placed GLB instances across 18 independently checked roots.
 - Cruise, Blitz, Checkpoint Race, Circuit, and Cop Blitz modes.
 - Traffic, police pursuit, damage, detachable parts, nitro, weather, time of day, water, wind, gamepad, keyboard, and touch controls.
 
@@ -57,10 +57,10 @@ This keeps roads open while making individual façades, towers, props, bridge ra
 
 ## External source build
 
-The five new GLBs are stored losslessly as Base64 source payloads under `sources/external/`. Rebuild their compact offline pack with:
+The fourteen external GLBs are stored losslessly as Base64 source payloads under `sources/external/`. Rebuild and inject their compact offline pack with:
 
 ```bash
-node tools/pack-external.mjs
+node tools/pack-external.mjs --write
 ```
 
 Verify that the embedded pack is reproducible without printing the generated payload:
